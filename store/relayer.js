@@ -44,7 +44,7 @@ const pickWeightedRandomRelayer = (items, netId) => {
     minFee = 0.01
     maxFee = 0.3
   }
-
+  console.log('log->items', items)
   const weightsScores = items.map((el) => calculateScore(el, minFee, maxFee))
   const totalWeight = weightsScores.reduce((acc, curr) => {
     return (acc = acc.plus(curr))
@@ -287,9 +287,9 @@ export const actions = {
     const { ensSubdomainKey } = rootGetters['metamask/networkConfig']
 
     commit('SET_IS_LOADING_RELAYERS', true)
-
+    console.log('log->getters.ethProvider', getters.ethProvider, ensSubdomainKey)
     const registeredRelayers = await relayerRegisterService(getters.ethProvider).getRelayers(ensSubdomainKey)
-
+    console.log('log->registeredRelayers', registeredRelayers)
     const requests = []
     for (const registeredRelayer of registeredRelayers) {
       requests.push(dispatch('observeRelayer', { relayer: registeredRelayer }))
@@ -608,7 +608,7 @@ export const actions = {
     const { txHash, confirmations, status, failedReason } = await response.json()
     console.log('txHash, confirmations, status, failedReason', txHash, confirmations, status, failedReason)
     commit('UPDATE_JOB', { id, netId, type, txHash, confirmations, status, failedReason })
-
+    console.log('log->UPDATE_JOB', { id, netId, type, txHash, confirmations, status, failedReason })
     if (status === 'FAILED') {
       dispatch('stopFinishJobWatcher', { id })
       commit('DELETE_JOB', { id, netId, type })

@@ -31,7 +31,7 @@ export default {
       if (this.withdrawType === 'wallet') {
         return 'application/withdraw'
       }
-
+      // return 'application/withdraw'
       return 'relayer/relayTornadoWithdraw'
     }
   },

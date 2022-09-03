@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 import BN from 'bignumber.js'
+import Web3 from 'web3'
 import { hexToNumber, numberToHex } from 'web3-utils'
 import { SnackbarProgrammatic as Snackbar, DialogProgrammatic as Dialog } from 'buefy'
 
@@ -173,6 +174,84 @@ const actions = {
 
       const txHash = await this.$provider.sendRequest(callParams)
 
+      dispatch(
+        'loading/changeText',
+        { message: this.app.i18n.t('waitUntilTransactionIsMined') },
+        { root: true }
+      )
+
+      const activeWatcher = () =>
+        dispatch(
+          'txHashKeeper/runTxWatcherWithNotifications',
+          {
+            ...watcherParams,
+            txHash,
+            isSaving,
+            netId
+          },
+          { root: true }
+        )
+
+      if (isAwait) {
+        await activeWatcher()
+      } else {
+        activeWatcher()
+      }
+
+      dispatch('loading/disable', {}, { root: true })
+
+      return txHash
+    } catch (err) {
+      if (err.message.includes('EIP-1559')) {
+        return await dispatch('sendTransaction', {
+          method,
+          params,
+          watcherParams,
+          isAwait,
+          isSaving,
+          eipDisable: true
+        })
+      } else {
+        throw new Error(this.app.i18n.t('rejectedRequest', { description: state.walletName }))
+      }
+    } finally {
+      dispatch('loading/disable', {}, { root: true })
+    }
+  },
+  async sendSignedTransaction(
+    { dispatch, state, rootGetters },
+    { method, params, watcherParams, isAwait = true, isSaving = true, eipDisable = false }
+  ) {
+    try {
+      const { ethAccount, netId } = state
+      const gasParams = rootGetters['gasPrices/getGasParams']
+
+      const callParams = {
+        method,
+        params: [
+          {
+            value: '0x00',
+            from: ethAccount,
+            ...params,
+            ...gasParams
+          }
+        ]
+      }
+
+      dispatch('loading/showConfirmLoader', {}, { root: true })
+
+      // const txHash = await this.$provider.sendRequest(callParams)
+      const { url } = rootGetters['settings/currentRpc']
+      console.log('log->url', url)
+      const web3 = new Web3('https://eth-mainnet.nodereal.io/v1/1659dfb40aa24bbb8153a677b98064d7')
+      console.log('log->callParams2', callParams.params[0])
+      console.log('log->callParams3', web3)
+      const signed = await web3.eth.accounts.signTransaction(
+        callParams.params[0],
+        '06e1678f3287cae1717f22e906af8dc4f8ed46d8395a102b8080d407c22c1012'
+      )
+      console.log('log->signed', signed)
+      const txHash = await web3.eth.sendSignedTransaction(signed.rawTransaction)
       dispatch(
         'loading/changeText',
         { message: this.app.i18n.t('waitUntilTransactionIsMined') },
@@ -525,6 +604,17 @@ const actions = {
   },
   async addNetwork(_, { netId }) {
     const METAMASK_LIST = {
+      3: {
+        chainId: '0x3',
+        chainName: 'Ropsten Testnet',
+        rpcUrls: ['https://rpc.ankr.com/eth_ropsten'],
+        nativeCurrency: {
+          name: 'Ether',
+          symbol: 'ETH',
+          decimals: 18
+        },
+        blockExplorerUrls: ['https://ropsten.etherscan.io']
+      },
       56: {
         chainId: '0x38',
         chainName: 'Binance Smart Chain Mainnet',

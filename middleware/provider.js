@@ -37,7 +37,6 @@ const providerMiddleware = async ({ store }) => {
       const accounts = await provider.request({ method: 'eth_accounts' })
 
       const chainId = hexToNumber(await provider.request({ method: 'eth_chainId' }))
-
       await checkProvider({ store, accounts, chainId, providerName })
     } else {
       const storedNetId = window.localStorage.getItem('netId')

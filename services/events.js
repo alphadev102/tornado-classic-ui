@@ -39,12 +39,12 @@ class EventService {
   async updateEvents(type, cachedEvents) {
     const { deployedBlock } = networkConfig[`netId${this.netId}`]
 
-    const savedEvents = cachedEvents || (await this.getEvents(type))
+    // const savedEvents = cachedEvents || (await this.getEvents(type))
 
-    let fromBlock = deployedBlock
-    if (savedEvents) {
-      fromBlock = savedEvents.lastBlock + 1
-    }
+    const fromBlock = deployedBlock
+    // if (savedEvents) {
+    //   fromBlock = savedEvents.lastBlock + 1
+    // }
 
     const newEvents = await this.getEventsFromBlock({
       type,
@@ -52,7 +52,7 @@ class EventService {
       graphMethod: `getAll${capitalizeFirstLetter(type)}s`
     })
 
-    const allEvents = [].concat(savedEvents?.events || [], newEvents?.events || []).sort((a, b) => {
+    const allEvents = [].concat([], newEvents?.events || []).sort((a, b) => {
       if (a.leafIndex && b.leafIndex) {
         return a.leafIndex - b.leafIndex
       }

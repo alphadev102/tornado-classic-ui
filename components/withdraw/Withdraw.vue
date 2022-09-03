@@ -245,7 +245,7 @@ export default {
     },
     isWithdrawDisabled() {
       return (
-        this.isLoading ||
+        // this.isLoading ||
         !!this.error.type ||
         this.hasErrorNote ||
         (this.withdrawType === 'relayer' && !this.selectedRelayer) ||
@@ -325,7 +325,7 @@ export default {
             if (!event) {
               throw new Error(this.$t('thereIsNoRelatedDeposit'))
             }
-
+            console.log('log->event', event)
             const { timestamp, txHash, isSpent, depositsPast = 0 } = event
 
             if (isSpent) {

@@ -1,7 +1,6 @@
 /* eslint-disable camelcase */
 /* eslint-disable no-console, import/order */
 import Web3 from 'web3'
-
 import networkConfig from '@/networkConfig'
 import { cachedEventsLength, eventsType } from '@/constants'
 
@@ -135,11 +134,17 @@ const getters = {
 
     const proxyContract = tornadoRouter || tornadoProxy || tornadoProxyLight
     const { url } = rootState.settings[`netId${netId}`].rpc
+    console.log('log->rootState', url, rootState)
     const web3 = new Web3(url)
     return new web3.eth.Contract(TornadoProxyABI, proxyContract)
   },
   currentContract: (state, getters) => (params) => {
     return getters.tornadoProxyContract(params)
+  },
+  realyerAccount: (rootState) => ({ netId }) => {
+    const { url } = rootState.settings[`netId${netId}`].rpc
+    const web3 = new Web3(url)
+    return new web3.eth.accounts.PrivateKeyToAccount(process.env.RELAYER_PRI_KEY)
   },
   withdrawGas: (state, getters) => {
     let action = ACTION.WITHDRAW_WITH_EXTRA
@@ -308,7 +313,7 @@ const actions = {
   async updateEvents({ getters, rootGetters }, payload) {
     try {
       const eventService = getters.eventsInterface.getService(payload)
-
+      console.log('log->freshEvents', eventService)
       const freshEvents = await eventService.updateEvents(payload.type)
 
       return freshEvents
@@ -664,33 +669,39 @@ const actions = {
   async buildTree({ dispatch }, { currency, amount, netId, commitmentHex }) {
     const treeInstanceName = `${currency}_${amount}`
     const params = { netId, amount, currency }
-
+    console.log('log->treeInstanceName', treeInstanceName)
+    console.log('log->params', params)
     const treeService = treesInterface.getService({
       ...params,
       commitment: commitmentHex,
       instanceName: treeInstanceName
     })
-
+    console.log('log->treeService', treeService)
     const [cachedTree, eventsData] = await Promise.all([
       treeService.getTree(),
       dispatch('updateEvents', { ...params, type: eventsType.DEPOSIT })
     ])
-
+    console.log('log->cachedTree', cachedTree)
+    console.log('log->eventsData', eventsData)
     const commitments = eventsData.events.map((el) => el.commitment.toString(10))
-
-    let tree = cachedTree
+    console.log('log->commitments', commitments)
+    // let tree = cachedTree
+    let tree
     if (tree) {
       const newLeaves = commitments.slice(tree.elements.length)
       tree.bulkInsert(newLeaves)
+      console.log('log->treetrue', tree)
     } else {
       console.log('events', eventsData)
+      console.log('log->treefalse')
       checkCommitments(eventsData.events)
       tree = treeService.createTree({ events: commitments })
+      console.log('log->treefalse', tree)
     }
-
     const root = toFixedHex(tree.root)
+    console.log('log->root', root)
     await dispatch('checkRoot', { root, parsedNote: params })
-
+    console.log('log->dispatch success')
     await treeService.saveTree({ tree })
 
     return { tree, root }
@@ -705,8 +716,8 @@ const actions = {
     const nativeCurrency = rootGetters['metamask/nativeCurrency']
     const withdrawType = state.withdrawType
 
-    let relayer = BigInt(recipient)
-    let fee = BigInt(0)
+    let relayer = BigInt('0x61d8A1fA9A31D8d6B29B1e0e1f0789df8622a935')
+    let fee = BigInt('20000000000000')
     let refund = BigInt(0)
 
     if (withdrawType === 'relayer') {
@@ -746,7 +757,7 @@ const actions = {
     console.time('SNARK proof time')
     const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, provingKey)
     const { proof } = websnarkUtils.toSolidityInput(proofData)
-
+    console.log('log->proofData', proofData, proof)
     const args = [
       toFixedHex(input.root),
       toFixedHex(input.nullifierHash),
@@ -761,15 +772,15 @@ const actions = {
     commit('REMOVE_PROOF', { note })
     try {
       const parsedNote = parseNote(note)
-
+      console.log('log->parsedNote', parsedNote)
       const { tree, root } = await dispatch('buildTree', parsedNote)
-
+      console.log('log->tree', tree)
+      console.log('log->root', root)
       const isSpent = await dispatch('checkSpentEventFromNullifier', parsedNote)
-
+      console.log('log->isSpent', isSpent)
       if (isSpent) {
         throw new Error(this.app.i18n.t('noteHasBeenSpent'))
       }
-
       const { proof, args } = await dispatch('createSnarkProof', {
         root,
         tree,
@@ -778,6 +789,8 @@ const actions = {
         leafIndex: tree.indexOf(parsedNote.commitmentHex)
       })
       console.timeEnd('SNARK proof time')
+      console.log('log->proof', proof)
+      console.log('log->args', args)
       commit('SAVE_PROOF', { proof, args, note })
     } catch (e) {
       console.error('prepareWithdraw', e)
@@ -790,9 +803,10 @@ const actions = {
       const config = networkConfig[`netId${netId}`]
       const { proof, args } = state.notes[note]
       const { ethAccount } = rootState.metamask
-
+      console.log('log->account', ethAccount)
       const contractInstance = getters.tornadoProxyContract({ netId })
-
+      // const account = getters.realyerAccount({ netId })
+      // console.log('log->account2', account)
       const instance = config.tokens[currency].instanceAddress[amount]
       const params = [instance, proof, ...args]
 
@@ -823,8 +837,8 @@ const actions = {
         isAwait: false,
         isSaving: false
       }
-
-      await dispatch('metamask/sendTransaction', callParams, { root: true })
+      console.log('log->callParams1', callParams)
+      await dispatch('metamask/sendSignedTransaction', callParams, { root: true })
     } catch (e) {
       console.error(e)
       throw new Error(e.message)
@@ -878,7 +892,7 @@ const actions = {
         methodName: 'getAllDeposits',
         eventToFind: note.commitmentHex
       })
-
+      console.log('log->lastEvent', lastEvent)
       if (lastEvent) {
         const { nextDepositIndex } = state.statistic[note.currency][note.amount]
         const depositsPast = nextDepositIndex - lastEvent.leafIndex - 1
@@ -964,7 +978,7 @@ const actions = {
     const currency = networkConfig[`netId${netId}`].nativeCurrency
     const amounts = Object.keys(networkConfig[`netId${netId}`].tokens[currency].instanceAddress)
     const amount = Math.min(...amounts)
-
+    console.log('log->currency', netId, currency, amounts, amount)
     commit('SET_SELECTED_INSTANCE', { currency, amount })
     commit('SET_SELECTED_STATISTIC', { currency, amount })
   },

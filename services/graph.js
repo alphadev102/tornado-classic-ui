@@ -20,7 +20,7 @@ const link = ({ getContext }) => {
 }
 
 const CHAIN_GRAPH_URLS = {
-  1: 'https://api.thegraph.com/subgraphs/name/tornadocash/mainnet-tornado-subgraph',
+  // 1: 'https://api.thegraph.com/subgraphs/name/tornadocash/mainnet-tornado-subgraph',
   5: 'https://api.thegraph.com/subgraphs/name/tornadocash/goerli-tornado-subgraph',
   10: 'https://api.thegraph.com/subgraphs/name/tornadocash/optimism-tornado-subgraph',
   56: 'https://api.thegraph.com/subgraphs/name/tornadocash/bsc-tornado-subgraph',

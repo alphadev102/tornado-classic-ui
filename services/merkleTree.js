@@ -155,6 +155,7 @@ class MerkleTreeService {
   async getTree() {
     const { nativeCurrency } = networkConfig[`netId${this.netId}`]
     const hasCache = nativeCurrency === this.currency && Number(this.netId) === 1
+    // const hasCache = nativeCurrency === this.currency && Number(this.netId) === 100000
 
     let cachedTree = await this.getTreeFromDB()
 
